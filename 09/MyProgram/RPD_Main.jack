@@ -1,0 +1,23 @@
+/* This program prompts the user to provide the radius of a circle and then prints both a circle with that radius and the approximate area of the circle (computed assuming pie=3) on the screen */
+
+/** Main class for this program. */
+
+class Main {
+	function void main() {
+		var int rad;
+		var Circle userCircle;
+
+		do Screen.clearScreen();
+		do Output.moveCursor(0,0);
+		let rad = Keyboard.readInt("What is the radius of your circle in pixels (must be <50)?");
+		
+		while (rad > 49) {
+			let rad = Keyboard.readInt("Invalid entry. Please enter the radius of your circle in pixels (must be <50).");
+		}
+		
+		let userCircle = Circle.new(rad);
+		do userCircle.area();
+		do userCircle.draw();
+		return;
+	}
+}
