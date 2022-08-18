@@ -1,0 +1,29 @@
+/** Implements a graphical circle. */
+
+class Circle {
+	
+	field int radius; //radius of circle to draw
+
+	constructor Circle new(int r) {
+		let radius = r;
+		return this;
+	}
+
+	method void draw() {
+		do Screen.setColor(true);
+		do Screen.drawCircle(256,123,radius); 
+		return;
+	}
+
+	method void area() {
+		var int A;
+		let A = radius*radius*3;
+		do Screen.clearScreen();
+		do Output.moveCursor(0,0);
+		do Output.printString("The area of the circle is approximately: ");
+		do Output.printInt(A);
+		return;
+	}
+
+
+}
