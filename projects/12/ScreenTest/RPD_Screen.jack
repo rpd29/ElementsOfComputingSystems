@@ -1,0 +1,261 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Screen.jack
+
+/**
+ * A library of functions for displaying graphics on the screen.
+ * The Hack physical screen consists of 512 rows (indexed 0..511, top to bottom)
+ * of 256 pixels each (indexed 0..255, left to right). The top left pixel on 
+ * the screen is indexed (0,0).
+ */
+class Screen {
+    
+    static Array screenMemoryMap; //Declare static/class array variable used to access screen memory map
+    static boolean drawColor; //Declare static/class boolean variable to use to set color to use for drawing (true for black, false for white)
+    static Array wordBit; //Declare array variable to be used to access individual bits within words in Screen memory map
+
+    /** Initializes the Screen. */
+    function void init() {
+        let screenMemoryMap = 16384; //Set pointer to screenMemoryMap to base of screen memory map
+        do Screen.clearScreen(); //Clear the screen of any previous output
+        let drawColor = true; //Initialize drawing color to black
+
+        let wordBit = Array.new(16);
+        let wordBit[0] = 1;
+        let wordBit[1] = 2;
+        let wordBit[2] = 4;
+        let wordBit[3] = 8;
+        let wordBit[4] = 16;
+        let wordBit[5] = 32;
+        let wordBit[6] = 64;
+        let wordBit[7] = 128;
+        let wordBit[8] = 256;
+        let wordBit[9] = 512;
+        let wordBit[10] = 1024;
+        let wordBit[11] = 2048;
+        let wordBit[12] = 4096;
+        let wordBit[13] = 8192;
+        let wordBit[14] = 16384;
+        let wordBit[15] = 32767 + 1; // 16th bit represents sign of number represented by other 15 bits, so need to add 1 to (2^15)-1 to get 1 in that bit and zero in all the other bits 
+
+        return;
+    }
+
+    /** Erases the entire screen. */
+    function void clearScreen() {
+        var int i; 
+
+        let i = 0;
+        while (i < 8192) {
+            let screenMemoryMap[i] = 0;
+            let i = i + 1;
+        }
+
+        return;
+    }
+
+    /** Sets the current color, to be used for all subsequent drawXXX commands.
+     *  Black is represented by true, white by false. */
+    function void setColor(boolean b) {
+        let drawColor = b;
+        return;
+    }
+
+    /** Draws the (x,y) pixel, using the current color. */
+    function void drawPixel(int x, int y) {
+        var int pixelWord, pixelBit;
+        
+
+        let pixelWord = (y*32) + (x/16); //Calculate the word that the bit representing pixel is in
+        let pixelBit = x - (16*(x/16)); //Calculate remainder of x/16 to find specific bit within word that pixel is in
+        
+        //Code to execute if drawing color is black
+        if (drawColor) { 
+            let screenMemoryMap[pixelWord] = (screenMemoryMap[pixelWord] | wordBit[pixelBit]);
+        }
+        
+        //Code to execute if drawing color is white
+        else {
+            let screenMemoryMap[pixelWord] = ((screenMemoryMap[pixelWord]) & (~wordBit[pixelBit]));
+        }
+
+        return;
+    }
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
+    function void drawLine(int x1, int y1, int x2, int y2) {
+        var int dx,dy,a,b,adyMinusbdx;
+        var int i, startx, finishx, startPixelWord, startPixelBit, finishPixelWord, finishPixelBit, bitMask; //Local variables for horizontal line drawing
+
+        //Handles vertical line case
+        if (x1 = x2) {
+            let dy = y2 - y1;
+            let b = 0;
+            while (Math.abs(b) < (Math.abs(dy)+1)) {
+                do Screen.drawPixel(x1,y1+b);
+                if (dy<0) {
+                    let b = b - 1;
+                }
+                else {
+                    let b = b + 1;
+                }
+            }
+
+            return;
+        }
+
+        //Handles horizontal line case
+        if (y1 = y2) {
+
+            //Figure out ordering of x values of the two points and assign x values to local variables
+            if (x1<x2) {
+                let startx = x1;
+                let finishx = x2; 
+            }
+            else {
+                let startx = x2;
+                let finishx = x1;
+            }
+            
+            let startPixelWord = (y1*32) + (startx/16); //Calculate the word that the bit representing the starting pixel is in
+            let startPixelBit = startx - (16*(startx/16)); //Calculate remainder of startx/16 to find specific bit within word that pixel is in
+            let finishPixelWord = (y1*32) + (finishx/16); //Calculate the word that the bit representing the finishing pixel is in
+            let finishPixelBit = finishx - (16*(finishx/16)); //Calculate remainder of finishx/16 to find specific bit within word that pixel is in
+
+            
+            //Handle special case where startPixelWord = finishPixelWord
+            if (startPixelWord = finishPixelWord) {
+                let i = startPixelBit;
+                let bitMask = 0;
+                
+                while (i < (finishPixelBit + 1)) {
+                    let bitMask = bitMask + wordBit[i];
+                    let i = i + 1;
+                }
+
+                if (drawColor) {
+                    let screenMemoryMap[startPixelWord] = (screenMemoryMap[startPixelWord] | bitMask);
+                }
+                else {
+                    let bitMask = ~bitMask; //Flip every binary digit of bit mask
+                    let screenMemoryMap[startPixelWord] = (screenMemoryMap[startPixelWord] & bitMask);
+                }
+
+                return;
+            }
+
+            //Handle first word in contigous words that need to be changed to draw horizontal line
+
+            let i = startPixelBit;
+            let bitMask = 0;
+
+            while (i < 16) {    
+                let bitMask = bitMask + wordBit[i];
+                let i = i + 1;
+            }
+
+            if (drawColor) {
+                let screenMemoryMap[startPixelWord] = (screenMemoryMap[startPixelWord] | bitMask);
+            }
+            else {
+                let bitMask = ~bitMask; //Flip every binary digit of bit mask
+                let screenMemoryMap[startPixelWord] = (screenMemoryMap[startPixelWord] & bitMask);
+            }
+
+            //Handle all words between first and last word that need to be changed to draw horizontal line
+
+            let i = startPixelWord + 1;
+            while (i<finishPixelWord) {
+                if (drawColor) {
+                    let screenMemoryMap[i] = -1;
+                }
+                else {
+                    let screenMemoryMap[i] = 0;
+                }
+
+                let i = i + 1;
+            }
+
+            
+            //Handle last word that needs to be changed to draw horizontal line
+            let i = 0;
+            let bitMask = 0; 
+
+            while (i < (finishPixelBit + 1)) {
+                let bitMask = bitMask + wordBit[i];
+                let i = i + 1;
+            }
+
+            if (drawColor) {
+                let screenMemoryMap[finishPixelWord] = (screenMemoryMap[finishPixelWord] | bitMask);
+            }
+            else {
+                let bitMask = ~bitMask; //Flip every binary digit of bit mask
+                let screenMemoryMap[finishPixelWord] = (screenMemoryMap[finishPixelWord] & bitMask);
+            }
+
+            return;
+        }
+
+        
+        //Handles non horizontal or vertical line cases
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let a = 0;
+        let b = 0;
+        let adyMinusbdx = 0;
+
+        while((Math.abs(a) < (Math.abs(dx) + 1)) | (Math.abs(b) < (Math.abs(dy) + 1))) {
+            do Screen.drawPixel(x1+a,y1+b);
+            if (adyMinusbdx<0) {
+                if (dx<0) {
+                    let a = a - 1;
+                } 
+                else {
+                    let a = a + 1;
+                }
+                let adyMinusbdx = adyMinusbdx + Math.abs(dy);
+            }
+            else {
+                if (dy<0) {
+                    let b = b - 1;
+                }
+                else {
+                    let b = b + 1;
+                }
+                let adyMinusbdx = adyMinusbdx - Math.abs(dx);
+            } 
+
+        }
+
+    return;
+    }
+
+
+    /** Draws a filled rectangle whose top left corner is (x1, y1)
+     * and bottom right corner is (x2,y2), using the current color. */
+    function void drawRectangle(int x1, int y1, int x2, int y2) {
+        var int yLevel;
+
+        let yLevel = y1;
+        while (yLevel < (y2 + 1)) {
+            do Screen.drawLine(x1,yLevel,x2,yLevel);
+            let yLevel = yLevel + 1;
+        }
+        
+        return;
+    }
+
+    /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
+    function void drawCircle(int x, int y, int r) {
+        var int dy; 
+        let dy = r;
+        while (dy > (-r - 1)) {
+            do Screen.drawLine(x - Math.sqrt((r*r) - (dy*dy)), y + dy, x + Math.sqrt((r*r) - (dy*dy)), y + dy);
+            let dy = dy - 1;
+        }
+
+        return;
+    }
+}

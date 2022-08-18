@@ -1,0 +1,114 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */ 
+class Memory {
+    
+    /** Declare variable to use to store pointer to base of first block of freeList (initially base of heap) */
+    
+    static int freeList; 
+
+    /** Declare variable that will enable direct access to hardware platform's RAM */
+
+    static Array memory;    
+
+
+    /** Initializes freeList static variable, memory reference/pointer variable, length of first empty block, and pointer to next empty block (initially null) */
+    
+    function void init() {
+        let freeList = 2048;
+        let memory = 0;
+        let memory[freeList] = 14336;
+        let memory[freeList+1] = 0; 
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return memory[address];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let memory[address] = value;
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+    a reference to its base address. Uses "first-fit" heuristic to find first block of sufficient size. */
+    
+    function int alloc(int size) {
+        var int currentBlock, prevBlock, nextBlock;
+
+        let prevBlock = 0;
+        let currentBlock = freeList;
+        let nextBlock = memory[freeList + 1];
+
+        while (~(currentBlock = 0)) {
+            
+            /** Code to execute if currentBlock is large enough*/
+            
+            if (memory[currentBlock] > size) {
+                
+                /** Code to execute if selected block still has space left over after allocation */
+                
+                if (memory[currentBlock] > size + 2) { 
+                    if (~(prevBlock = 0)) {
+                        let memory[prevBlock+1] = currentBlock + size + 1;
+                    }
+                    let memory[currentBlock + size + 1] = memory[currentBlock] - size - 1;
+                    let memory[currentBlock + size + 2] = memory[currentBlock + 1];
+                    
+                    /** If selected block is first block in freeList, reassign freeList to next free block */ 
+                    if (currentBlock = freeList) {
+                        let freeList = currentBlock + size + 1;
+                    }
+                } 
+                
+                /** Code to execute if selected block doesn't have space left over after allocation */
+                
+                else {
+                    if (~(prevBlock = 0)) {
+                        let memory[prevBlock + 1] = nextBlock;
+                    }
+                    if (currentBlock = freeList) {
+                        let freeList = nextBlock;
+                    }
+                }
+                
+
+                let memory[currentBlock] = size + 1; //Put size of block in entry -1
+                return currentBlock + 1; //Return base address for the array
+            } 
+
+            /** If current block isn't large enough, move on to next block */
+
+            else {
+                let prevBlock = currentBlock;
+                let currentBlock = nextBlock;
+                let nextBlock = memory[nextBlock+1];
+            }
+        }
+        
+        /** Could add code here to defragment/adjoin adjacent blocks in freeList (I haven't done this so far) */
+
+        return "not sufficient memory"; 
+
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+
+        let memory[o] = memory[freeList + 1];
+        let memory[freeList + 1] = o - 1;
+        return;
+
+    }    
+}
